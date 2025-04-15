@@ -8,55 +8,43 @@
 #define TFT_DC   D3
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
+GFXcanvas1 canvas(160, 128); // монохромный буфер, экономит память
 U8G2_FOR_ADAFRUIT_GFX u8g2;
 
 void setup() {
-    tft.initR(INITR_GREENTAB);
-    tft.setRotation(3);
-    // после инициализации дисплея
-tft.setSPISpeed(20000000); // 20 MHz
+  tft.initR(INITR_GREENTAB);
+  tft.setRotation(3);
+  tft.setSPISpeed(40000000); // максимум для ST7735
 
-    tft.fillScreen(ST77XX_RED); // Ярко-красный экран
-    delay(22);
-    tft.fillScreen(ST77XX_GREEN);
-    delay(22);
-    tft.fillScreen(ST77XX_BLUE);
-    delay(22);
-    
-    
+  u8g2.begin(canvas); // подключаем u8g2 к буферу
+
+  canvas.fillScreen(0); // чёрный фон
+
+  u8g2.setFontMode(0); // отключить сглаживание (быстрее)
+  u8g2.setFontDirection(0);
+  u8g2.setForegroundColor(1); // белый цвет (1 = белый в GFXcanvas1)
+  u8g2.setBackgroundColor(0); // чёрный фон
+
+  int y = 5;
+  u8g2.setFont(u8g2_font_6x13_t_cyrillic);
+  u8g2.setCursor(0, y += 13);
+  u8g2.print("6x13: Привет, мир!");
+
+  u8g2.setFont(u8g2_font_9x15_t_cyrillic);
+  u8g2.setCursor(0, y += 16);
+  u8g2.print("9x15: Привет, мир!");
+
+  u8g2.setFont(u8g2_font_7x13_t_cyrillic);
+  u8g2.setCursor(0, y += 15);
+  u8g2.print("7x13: Привет, мир!");
+
+  u8g2.setFont(u8g2_font_8x13_t_cyrillic);
+  u8g2.setCursor(0, y += 15);
+  u8g2.print("8x13: Привет, мир!");
+
+  // выводим буфер на экран
   tft.fillScreen(ST77XX_BLACK);
-  u8g2.setForegroundColor(ST77XX_WHITE);  // Цвет текста
-  u8g2.setBackgroundColor(ST77XX_BLACK);  // Цвет фона
-  
-  u8g2.begin(tft);
-//  u8g2.setFont(u8g2_font_cu12_t_cyrillic);
-
-int y = 5;
-// Шрифт 1
-u8g2.setFont(u8g2_font_cu12_t_cyrillic);
-u8g2.setCursor(0, y += 12);
-u8g2.print("cu12: Привет, мир!");
-
-// Шрифт 2
-u8g2.setFont(u8g2_font_profont15_tf);
-u8g2.setCursor(0, y += 15);
-u8g2.print("profont15: Привет!");
-
-// Шрифт 3
-u8g2.setFont(u8g2_font_6x13_t_cyrillic);
-u8g2.setCursor(0, y += 15);
-u8g2.print("6x13: Привет, мир!");
-
-// Шрифт 4
-u8g2.setFont(u8g2_font_cu12_t_cyrillic);
-u8g2.setCursor(0, y += 13);
-u8g2.print("t0_11: Привет, мир!");
-
-// Шрифт 5
-u8g2.setFont(u8g2_font_9x15_t_cyrillic);
-u8g2.setCursor(0, y += 17);
-u8g2.print("9x15: Привет, мир!");
-
+  tft.drawBitmap(0, 0, canvas.getBuffer(), canvas.width(), canvas.height(), ST77XX_WHITE);
 }
 
 void loop() {}
