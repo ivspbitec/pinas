@@ -4,11 +4,10 @@
 #include <U8g2_for_Adafruit_GFX.h>
 #include <vector>
 
-#include "widget.h"
-#include "gauge.h"
-#include "gauge_bar.h"
-#include "vertical_bar.h"
-#include "line_chart.h"
+#include "w_gauge.h"
+#include "w_gauge_bar.h"
+#include "w_vertical_bar.h"
+#include "w_line_chart.h"
 
 // #define TFT_CS   D8
 // #define TFT_RST  D4
@@ -24,19 +23,42 @@ Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 bool btn1State = false;
 bool btn2State = false;
 
+volatile bool btn1Pressed = false;
+volatile bool btn2Pressed = false;
+
+void IRAM_ATTR handleBtn1Press() {
+  btn1Pressed = true;
+}
+
+void IRAM_ATTR handleBtn2Press() {
+  btn2Pressed = true;
+}
+
+
+Gauge w1(80, 60, "Диск");
+// GaugeBar w2(80, 60, "Температура");
+VerticalBar w3(40, 128, "CPU");
+LineChart w2(120, 60, "Download speed", COLOR(0, 60, 60), COLOR(0, 0, 0));
+std::vector<int> values;
+const int maxPoints = 50;
+unsigned long lastUpdate = 0;
+
 void setup()
 {
     pinMode(BTN1_PIN, INPUT_PULLUP);
-  pinMode(BTN2_PIN, INPUT_PULLUP);
+    pinMode(BTN2_PIN, INPUT_PULLUP);
 
-  setCpuFrequencyMhz(160); // уже максимум для ESP32-C3
-  SPI.begin(2, -1, 3);     // SCK = 2, MOSI = 3
+    attachInterrupt(digitalPinToInterrupt(BTN1_PIN), handleBtn1Press, FALLING);
+    attachInterrupt(digitalPinToInterrupt(BTN2_PIN), handleBtn2Press, FALLING);
 
-  tft.initR(INITR_BLACKTAB);
-  tft.setRotation(1);
-  tft.setSPISpeed(40000000); // максимум для ST7735
-  // tft.setAddrWindow(0, 0, 160, 128); // левый верхний угол — (0,0)
-  /*
+    setCpuFrequencyMhz(160); // уже максимум для ESP32-C3
+    SPI.begin(2, -1, 3);     // SCK = 2, MOSI = 3
+
+    tft.initR(INITR_BLACKTAB);
+    tft.setRotation(1);
+    tft.setSPISpeed(40000000); // максимум для ST7735
+    // tft.setAddrWindow(0, 0, 160, 128); // левый верхний угол — (0,0)
+    /*
     u8g2.begin(canvas); // подключаем u8g2 к буферу
 
     canvas.fillScreen(0); // чёрный фон
@@ -66,88 +88,51 @@ void setup()
     // выводим буфер на экран
     tft.fillScreen(ST77XX_BLACK);
     tft.drawBitmap(0, 0, canvas.getBuffer(), canvas.width(), canvas.height(), ST77XX_WHITE);
-  */
-  tft.fillScreen(ST77XX_BLACK);
-  delay(100);
-  tft.fillScreen(ST77XX_BLUE);
-  delay(100);
-  tft.fillScreen(ST77XX_RED);
-  delay(100);
-  tft.fillScreen(ST77XX_GREEN);
-  delay(100);
-  tft.fillScreen(ST77XX_BLACK);
+    */
+    tft.fillScreen(ST77XX_BLACK);
+    delay(100);
+    tft.fillScreen(ST77XX_BLUE);
+    delay(100);
+    tft.fillScreen(ST77XX_RED);
+    delay(100);
+    tft.fillScreen(ST77XX_GREEN);
+    delay(100);
+    tft.fillScreen(ST77XX_BLACK);
+
+    w2.setTitleColor(COLOR(255, 255, 200)); // Set title color to red
 }
-
-Gauge w1(80, 60, "Диск");
-// GaugeBar w2(80, 60, "Температура");
-VerticalBar w3(80, 60, "CPU");
-LineChart w2(160, 60, COLOR(0, 60, 60));
-std::vector<int> values;
-const int maxPoints = 50;
-unsigned long lastUpdate = 0;
-
-
-bool readButton(uint8_t pin)
-{
-  static uint32_t lastDebounceTime[32] = {0};
-  static bool lastState[32] = {true};
-  static bool stableState[32] = {true};
-
-  bool reading = digitalRead(pin);
-  if (reading != lastState[pin])
-  {
-    lastDebounceTime[pin] = millis();
-    lastState[pin] = reading;
-  }
-
-  if ((millis() - lastDebounceTime[pin]) > 20)
-    stableState[pin] = reading;
-
-  return !stableState[pin]; // кнопка замыкается на GND → активна, когда LOW
-}
-
 
 
 void loop()
 {
+    if (btn1Pressed) {
+        btn1Pressed = false;
+        // например — сбросить график
+        values.clear();
+    }
 
-  btn1State = readButton(BTN1_PIN);
-btn2State = readButton(BTN2_PIN);
+    if (btn2Pressed) {
+        btn2Pressed = false;
+        // например — остановить обновление
+        return;
+    }
 
+    int percent = random(0, 101);
+    float valueGB = 1000.0 * (100 - percent) / 100.0;
+    w1.update(percent, String(valueGB, 1) + " ГБ");
 
+    percent = random(0, 101);
+    valueGB = 1000.0 * (100 - percent) / 100.0;
+    w3.update(percent, String(valueGB, 1) + " ГБ");
 
-  int percent = random(0, 101);
-  float valueGB = 1000.0 * (100 - percent) / 100.0;
-  w1.update(percent, String(valueGB, 1) + " ГБ");
+    values.push_back(random(0, 101));
+    if (values.size() > maxPoints)
+        values.erase(values.begin());
 
-  percent = random(0, 101);
-  valueGB = 1000.0 * (100 - percent) / 100.0;
-  w3.update(percent, String(valueGB, 1) + " ГБ");
+    String currentValue = String(values.back());
+    w2.update(values, 100, currentValue, percent);  
 
-  values.push_back(random(0, 101));
-  if (values.size() > maxPoints)
-    values.erase(values.begin());
-
-  w2.update(values, 100);
-
-
-if (btn1State)
-{
-  // например — сбросить график
-  values.clear();
- 
-}
-
-if (btn2State)
-{
-  // например — остановить обновление
-  return;
-}
-
-
-  w1.drawTo(tft, 0, 0);
-  w2.drawTo(tft, 0, 60);
-  w3.drawTo(tft, 80, 0);
-
-  // delay(100);
+    w1.drawTo(tft, 0, 0);
+    w2.drawTo(tft, 0, 60);
+    w3.drawTo(tft, 120, 0);
 }

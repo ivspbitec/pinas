@@ -34,46 +34,45 @@ public:
     float range = endAngle - startAngle;
 
     int thickness = roundf(12.0f * _w / 80.0f);
-    int steps = 50;
-    float delta = range / steps;
+    int steps = 60; // оптимальный баланс между скоростью и плотностью
 
+    // Определяем цвет в зависимости от процентов
+    uint16_t activeColor;
+    if (_percent <= 50)
+    {
+        activeColor = COLOR(0, 255, 0); // Зеленый
+    }
+    else if (_percent <= 80)
+    {
+        activeColor = COLOR(255, 255, 0); // Желтый
+    }
+    else
+    {
+        activeColor = COLOR(255, 0, 0); // Красный
+    }
+
+    uint16_t inactiveColor = COLOR(10, 10, 10); // Серый для неактивных частей
+
+    // Быстрая отрисовка дуги: одна линия на угол
     for (int i = 0; i < steps; i++)
     {
-      for (int j = 0; j <= 1; j++)
-      { // рисуем 2 линии с небольшим сдвигом
-        float angle = startAngle + (range * i / steps) + j * delta * 0.5f;
+        float angle = startAngle + (range * i / steps);
         float rad = radians(angle);
 
-        float ratio = float(i) / float(steps);
-        uint8_t rC = 0, gC = 0, bC = 0;
+        // Если неактивная часть — выходим из цикла
+        if (i >= (_percent * steps) / 100)
+            break;
 
-        if (i < (_percent * steps) / 100)
-        {
-          if (ratio <= 0.5f)
-          {
-            rC = roundf(ratio * 2.0f * 255.0f);
-            gC = 255;
-          }
-          else
-          {
-            rC = 255;
-            gC = roundf((1.0f - ratio) * 2.0f * 255.0f);
-          }
-        }
-        else
-        {
-          rC = gC = bC = 10;
-        }
+        uint16_t color = activeColor;
 
-        uint16_t color = COLOR(rC, gC, bC);
-
-        int x0 = cx + cos(rad) * (r - thickness);
-        int y0 = cy + sin(rad) * (r - thickness);
+        // Первая линия (основная дуга)
+        int x0 = cx + cos(rad) * (r - thickness + 1);
+        int y0 = cy + sin(rad) * (r - thickness + 1);
         int x1 = cx + cos(rad) * (r - 1);
         int y1 = cy + sin(rad) * (r - 1);
-
         canvas.drawLine(x0, y0, x1, y1, color);
-      }
+
+        
     }
 
     u8g2.setBackgroundColor(_bgColor);
