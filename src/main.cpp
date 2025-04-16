@@ -3,18 +3,27 @@
 #include <SPI.h>
 #include <U8g2_for_Adafruit_GFX.h>
 
-#include "gauge.h"
 
-#define TFT_CS   D8
-#define TFT_RST  D4
-#define TFT_DC   D3
+#include "widget.h"
+#include "gauge.h"
+#include "gauge_bar.h"
+
+
+//#define TFT_CS   D8
+//#define TFT_RST  D4
+//#define TFT_DC   D3
+//#define TFT_CS   4
+//#define TFT_RST  1
+//#define TFT_DC   5
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
-//GFXcanvas1 canvas(160, 128); // монохромный буфер, экономит память
-U8G2_FOR_ADAFRUIT_GFX u8g2;
-GFXcanvas16 canvasg(160,128);  // размер буфера 
-    
+ 
+
+
 void setup() {  
+  setCpuFrequencyMhz(160); // уже максимум для ESP32-C3
+  SPI.begin(2, -1, 3); // SCK = 2, MOSI = 3
+
   tft.initR(INITR_BLACKTAB);
   tft.setRotation(1);
   tft.setSPISpeed(40000000); // максимум для ST7735
@@ -50,33 +59,34 @@ void setup() {
   tft.fillScreen(ST77XX_BLACK);
   tft.drawBitmap(0, 0, canvas.getBuffer(), canvas.width(), canvas.height(), ST77XX_WHITE);
 */
-  tft.fillScreen(ST77XX_BLACK);
-  u8g2.begin(canvasg);
-
-
+tft.fillScreen(ST77XX_BLACK);
+delay(100);
+tft.fillScreen(ST77XX_BLUE);
+delay(100);
+tft.fillScreen(ST77XX_RED);
+delay(100);
+tft.fillScreen(ST77XX_GREEN);
+delay(100);
+tft.fillScreen(ST77XX_BLACK);
 }
 
  
 
+GaugeBar gauge1(80, 120, "Диск");
+GaugeBar gauge2(80, 120, "Температура");
   
 void loop() {
   int percent = random(0, 101);
   float valueGB = 1000.0 * (100 - percent) / 100.0;
 
   int percent2 = random(0, 101);
-  float valueGB2 = 1000.0 * (100 - percent) / 100.0;
+  float valueGB2 = 1000.0 * (100 - percent2) / 100.0;
 
-  // Очистка буфера
-  //canvasg.fillRect(0, 0, canvasg.width(), canvasg.height(), COLOR(150, 0, 0));  
-  canvasg.fillRect(0, 0, 50  , 100, COLOR(150, 0, 0)); 
+  gauge1.update(percent, String(valueGB, 1) + " ГБ");
+  gauge2.update(percent2, String(valueGB2, 1) + " грд");
 
-  drawGauge(canvasg, u8g2, 0, 0, 80 , 80, percent, "Диск", String(valueGB, 1) + " ГБ");
-  drawGauge(canvasg, u8g2, 80, 0, 80, 80, percent, "Температура", String(valueGB2, 1) + " грд");
-
-//rotateBuffer90CW(canvasg.getBuffer(), rotated, 128, 160);
-//tft.drawRGBBitmap(0, 0, rotated, 160, 128);
-  tft.drawRGBBitmap(0, 0, canvasg.getBuffer(), 160  ,128); 
- 
+  gauge1.drawTo(tft, 0, 0);
+  gauge2.drawTo(tft, 80, 0);
 
   //delay(100);
-} 
+}
